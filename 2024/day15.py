@@ -1,5 +1,13 @@
 import fileinput
 import itertools
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Point:
+    x: int
+    y: int
+    def __add__(self, other):
+        return Point(self.x + other.x, self.y + other.y)
 
 class Grid:
     def __init__(self, rows):
@@ -11,11 +19,14 @@ class Grid:
         for y in range(self.height):
             for x in range(self.width):
                 if pred(self.rows[y][x]):
-                    return (x,y)
+                    return Point(x,y)
         return None
 
     def at_xy(self, x, y):
         return self.rows[y][x]
+
+    def setp(self, p, v):
+        self.rows[p.y][p.x] = v
 
     def set_xy(self, x, y, v):
         self.rows[y][x] = v
@@ -50,16 +61,11 @@ moves = ''.join(lines[idx+1:])
 
 grid = Grid([row[:] for row in rows])
 
-def update(row):
+def update(row, x):
     row = row[:]
     last_free = None
-    p = None
 
-    for i, v in enumerate(row):
-        if v == '@':
-            p = i
-            break
-
+    for i, v in enumerate(row[:x]):
         if v == '.':
             last_free = i
 
@@ -67,21 +73,36 @@ def update(row):
             last_free = None
 
     if last_free == None:
-        return row
+        return (row, False)
 
-    patch = row[last_free+1:p+1] + ['.']
-    row[last_free:p+1] = patch
+    row[last_free:x] = row[last_free+1:x] + ['.']
 
-    return row
+    return (row, True)
+
+p = grid.find(lambda x: x == '@')
+grid.setp(p, '.')
+
+offset = {'^': Point(0,-1), 'v': Point(0,1), '<': Point(-1,0), '>': Point(1,0)}
 
 for move in moves:
-    (x,y) = grid.find(lambda x: x == '@')
+    has_moved = None
 
     match move:
-        case '^': grid.write_col(x, update(grid.col(x)))
-        case 'v': grid.write_col(x, reversed(update(list(reversed(grid.col(x))))))
-        case '<': grid.write_row(y, update(grid.row(y)))
-        case '>': grid.write_row(y, reversed(update(list(reversed(grid.row(y))))))
+        case '^':
+            col, has_moved = update(grid.col(p.x), p.y)
+            grid.write_col(p.x, col)
+        case 'v':
+            col, has_moved = update(list(reversed(grid.col(p.x))), grid.height - p.y - 1)
+            grid.write_col(p.x, reversed(col))
+        case '<': 
+            row, has_moved = update(grid.row(p.y), p.x)
+            grid.write_row(p.y, row)
+        case '>':
+            row, has_moved = update(list(reversed(grid.row(p.y))), grid.width - p.x - 1)
+            grid.write_row(p.y, reversed(row))
+
+    if has_moved:
+        p += offset[move]
 
 def score(grid, c):
     s = 0
@@ -139,25 +160,36 @@ def update_robot_vertical(grid, x, y, dy):
         case ']': can_move = can_move_box_vertical(grid, x-1, y+dy, dy)
 
     if not can_move:
-        return
+        return False
 
     match grid.at_xy(x, y+dy):
         case '[': update_box_vertical(grid, x,   y+dy, dy)
         case ']': update_box_vertical(grid, x-1, y+dy, dy)
 
-    grid.set_xy(x, y,    '.')
-    grid.set_xy(x, y+dy, '@')
+    return True
 
 rows = [list(itertools.chain.from_iterable([widen(c) for c in row])) for row in rows]
 grid = Grid(rows)
 
+p = grid.find(lambda x: x == '@')
+grid.setp(p, '.')
+
 for move in moves:
-    (x,y) = grid.find(lambda x: x == '@')
+    has_moved = None
 
     match move:
-        case '<': grid.write_row(y, update(grid.row(y)))
-        case '>': grid.write_row(y, reversed(update(list(reversed(grid.row(y))))))
-        case '^': update_robot_vertical(grid, x, y, -1)
-        case 'v': update_robot_vertical(grid, x, y,  1)
+        case '<': 
+            row, has_moved = update(grid.row(p.y), p.x)
+            grid.write_row(p.y, row)
+        case '>':
+            row, has_moved = update(list(reversed(grid.row(p.y))), grid.width - p.x - 1)
+            grid.write_row(p.y, reversed(row))
+        case '^': 
+            has_moved = update_robot_vertical(grid, p.x, p.y, -1)
+        case 'v':
+            has_moved = update_robot_vertical(grid, p.x, p.y,  1)
+
+    if has_moved:
+        p += offset[move]
 
 print(score(grid, '['))
