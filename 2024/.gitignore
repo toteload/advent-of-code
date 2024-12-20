@@ -2,3 +2,5 @@
 *.pyc
 input.txt
 input/
+*.pdb
+*.exe
