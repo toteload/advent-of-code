@@ -6,6 +6,10 @@ class Point:
     y: int
     def __add__(self, other):
         return Point(self.x + other.x, self.y + other.y)
+    def __lt__(self, other):
+        if self.x == other.x:
+            return self.y < other.y
+        return self.x < other.x
 
 class Grid:
     def __init__(self, rows):
@@ -48,5 +52,4 @@ class Grid:
 
     def compact_str(self):
         return '\n'.join([''.join(row) for row in self.rows])
-
 
