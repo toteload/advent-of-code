@@ -5,13 +5,7 @@ from functools import cache
 
 BIG = 9999999999999999999
 
-def flatten(xs):
-    return list(itertools.chain.from_iterable(xs))
-
-def manhattan(a,b):
-    xa,ya = a
-    xb,yb = b
-    return abs(xa-xb)+abs(ya-yb)
+dirchar = { (-1,0): '<', (1,0): '>', (0,-1): '^', (0,1): 'v' }
 
 # Starting position for the below keypad is on the A button.
 #
@@ -29,8 +23,6 @@ numpad = { '7': (0,0), '8': (1,0), '9': (2,0),
            '4': (0,1), '5': (1,1), '6': (2,1),
            '1': (0,2), '2': (1,2), '3': (2,2),
                        '0': (1,3), 'A': (2,3), }
-
-dirchar = { (-1,0): '<', (1,0): '>', (0,-1): '^', (0,1): 'v' }
 
 def numpad_paths(s,t):
     ax,ay = numpad[s]
