@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::str::FromStr;
@@ -10,6 +10,7 @@ pub fn parse_whitespace_separated_items<T: FromStr>(s: &str) -> Vec<T> {
         .collect()
 }
 
+#[derive(Copy, Clone)]
 struct SecretGenerator {
     seed: u64,
 }
@@ -42,53 +43,43 @@ fn part1(xs: &[u64]) -> u64 {
 }
 
 fn part2(xs: &[u64]) -> u64 {
-    let prices: Vec<Vec<i8>> = xs
-        .iter()
-        .map(|x| {
-            (SecretGenerator { seed: *x })
-                .map(|x| (x % 10) as i8)
-                .take(2001) // <- This needs to be 2001, not 2000 >:(
-                .collect()
-        })
-        .collect();
+    let prices = xs.iter().map(|x| {
+        (SecretGenerator { seed: *x })
+            .map(|x| (x % 10) as i8)
+            .take(2001) // <- This needs to be 2001, not 2000 >:(
+    });
 
-    let seqs: Vec<Vec<[i8; 4]>> = prices
-        .iter()
-        .map(|xs| {
-            let dt: Vec<i8> = xs
-                .iter()
-                .zip(xs.iter().skip(1))
-                .map(|(a, b)| b - a)
-                .collect();
-            dt.windows(4).map(|s| [s[0], s[1], s[2], s[3]]).collect()
-        })
-        .collect();
+    let seqs = prices.clone().map(|xs| {
+        let dt = xs
+            .clone()
+            .zip(xs.skip(1))
+            .map(|(a, b)| b - a)
+            .collect::<Vec<_>>();
 
-    let entries: Vec<Vec<(i8, [i8; 4])>> = prices
-        .into_iter()
-        .zip(seqs.into_iter())
-        .map(|(p, s)| p.into_iter().skip(4).zip(s.into_iter()).collect())
-        .collect();
+        dt.windows(4)
+            .map(|s| [s[0], s[1], s[2], s[3]])
+            .collect::<Vec<_>>()
+    });
 
-    let mut memo: HashMap<[i8; 4], u64> = HashMap::new();
+    let buyers = prices.zip(seqs).map(|(p, s)| p.skip(4).zip(s));
 
-    for entry in entries.iter() {
-        for (_, s) in entry.iter() {
-            if memo.contains_key(s) {
+    let mut seen: HashSet<[i8; 4]> = HashSet::new();
+    let mut bananas: HashMap<[i8; 4], u64> = HashMap::new();
+
+    for buyer in buyers {
+        seen.clear();
+
+        for (price, seq) in buyer {
+            if seen.contains(&seq) {
                 continue;
             }
 
-            let score: u64 = entries
-                .iter()
-                .filter_map(|e| e.iter().find(|&&x| x.1 == *s))
-                .map(|&x| x.0 as u64)
-                .sum();
-
-            memo.insert(*s, score);
+            *bananas.entry(seq).or_insert(0) += price as u64;
+            seen.insert(seq);
         }
     }
 
-    *memo.values().max().unwrap()
+    *bananas.values().max().unwrap()
 }
 
 fn main() {

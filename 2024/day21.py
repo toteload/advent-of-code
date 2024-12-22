@@ -120,10 +120,7 @@ def len_shortest_dirpad_seq(s,t,depth):
 def shortest_seq_len(code, depth):
     return sum(len_shortest_numpad_seq(s,t,depth) for (s,t) in pairwise(['A'] + list(code)))
 
-def complexity(code, l):
-    return l * int(code[:-1])
-
 codes = [line.strip() for line in fileinput.input()]
 
-print(sum(complexity(code, shortest_seq_len(code, 2)) for code in codes))
-print(sum(complexity(code, shortest_seq_len(code, 25)) for code in codes))
+print(sum(int(code[:-1]) * shortest_seq_len(code, 2) for code in codes))
+print(sum(int(code[:-1]) * shortest_seq_len(code, 25) for code in codes))
