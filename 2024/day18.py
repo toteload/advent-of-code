@@ -38,7 +38,6 @@ def make_heuristic(end):
         return manhattanp(p, end)
     return heuristic
 
-
 def make_neighbors(grid):
     def neighbors(p):
         (x, y) = p.x,p.y
