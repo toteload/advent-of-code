@@ -16,9 +16,7 @@ Donts ← Presence ⍜⍉ (⊡3) Ops
 Off ← ¯Donts
 On  ← ⍜⊡◌ 0 Dos 1
 
-Clamp ← ↥⊙↧ 0 1
-
-Active ← \(Clamp+) + Off On
+Active ← \(↥⊙↧ 0 1 +) + Off On
 
 M ← × Active ¬+ Dos Donts
 
