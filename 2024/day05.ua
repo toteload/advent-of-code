@@ -1,4 +1,4 @@
-Text ← &fras "test/05.txt"
+Text ← &fras "input/05.txt"
 
 P ← ⊜□ ⊸(¬ ⦷ "\n\n") Text
 Q ← ⍚(⊜□ ⊸≠@\n) P
@@ -22,41 +22,40 @@ A ← /+ ≡(PickMid °□) ▽ M Pages
 # 1. Find all the relevant order constraints
 # 2. Given the constraints find a topological order
 #   a. Construct an adjacency matrix
-#   b. Square it N times using max plus matrix multiplication
+#   b. Square it ceil(log2(N)) times using max plus matrix multiplication
 
 # A list of all relevant page groups for this part
 Pages ← ▽ ≡Incorrect . Pages
 
 # Get order constraints for a group of pages
-Orders ← ▽ ≡(∊Rules) . ≡⇌◇⧅<2
-
-P ← ≡⊗ ⊃(Orders|¤)
+Constraints ← ▽ ⊸≡(∊Rules) ⊂ ≡⇌ . ⧅<2
 
 Adjs ← ⊃(
 | ∘
 | ˜(↯⧻) 1
-) P
+) ≡⊗ ⊃(Constraints|¤)
 
 Diag ← ⊃(
-| ≡(⊂.)⇡ # Create diagonal indices
-| ˜↯ 0   # List of zeroes to fill with
+| ≡(⊂.)⇡
+| ˜↯ 0
 ) ⧻
 
 Idxs ← ˜∩⊂⊃(Adjs|Diag)
 
 MaxPlus ← ⍜⍉⊞(/↥+)
 
-# This is still wrong. I misread a part...
-# After taking **only the incorrectly-ordered updates** and ordering them correctly ...
-# I also possibly shuffle other elements...
+Check ← (
+  ↧1/+ ∊ ◴♭ Constraints .
+  ⍤ "Unconstrained value found"
+)
 
-Ordered ← (
-  ⬚¯∞ ⌝⊡ Idxs   # Create the matrix
-  ⍥(MaxPlus.)10 # The square amount is hard coded to be high enough. not pretty 
-  ≡/↥           # Find the topological index for each page
-  ⊏⍖            # Sort the pages by topological index
+OrderedMid ← (
+  .
+  ⬚¯∞ ⌝⊡ Idxs
+  ⍥(MaxPlus.) ⊸(⌈ₙ2 ⧻)
+  ⊏⍖ ≡/↥
   PickMid
-) .
+)
 
-B ← /+ ≡(◇Ordered) Pages
+B ← /+ ≡◇OrderedMid Pages
 &p B
