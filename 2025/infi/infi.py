@@ -2,7 +2,7 @@ import fileinput
 import sys
 from itertools import cycle
 
-# Usage: python cutie.py input.txt
+# Usage: python infi.py input.txt
 
 directions = {
     'north':     (-1, -1),
