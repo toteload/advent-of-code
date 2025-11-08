@@ -24,7 +24,7 @@ def topleft(cells):
     h = len(cells[0])
     return (0, (h - 1) // 2)
 
-def read_cells():
+def read_input():
     # Skip the first and last line, because they don't contain any numbers
     lines = [*fileinput.input(encoding="utf-8")][1:-1]
 
@@ -60,12 +60,12 @@ def read_cells():
 
     return cells
 
-def pretty_print_cells(cells):
-    h = len(cells[0])
+def pretty_print_grid(grid, f):
+    h = len(grid[0])
     w = h // 2
-    rows = [w * [-1] for _ in range(h)]
+    rows = [w * [None] for _ in range(h)]
 
-    start = topleft(cells)
+    start = topleft(grid)
 
     for y in range(0, h, 2):
         for x in range(w):
@@ -74,19 +74,14 @@ def pretty_print_cells(cells):
             s = step(s, 'east', x)
 
             sx, sy = s
-            rows[y][x] = cells[sy][sx]
+            rows[y][x] = grid[sy][sx]
 
             s = step(s, 'southeast')
 
             sx, sy = s
-            rows[y+1][x] = cells[sy][sx]
+            rows[y+1][x] = grid[sy][sx]
 
-    def cellstr(c):
-        if c == -1:
-            return ' '
-        return str(c)
-
-    lines = [''.join([cellstr(c) for c in row]) for row in rows]
+    lines = [''.join([f(c) for c in row]) for row in rows]
 
     print(' ' + w * '__    ')
     for i, line in enumerate(lines):
@@ -95,75 +90,62 @@ def pretty_print_cells(cells):
         print(pre + ' \\__/'.join(line) + post)
     print('/  ' + w * '\\__/  ')
 
-def create_tree_shadow_map(cells, lamp_direction):
-    shadows = [len(cells[0]) * [None] for _ in range(len(cells))]
+def pretty_print_tree_heights(tree_heights):
+    def tree(c):
+        if c == -1:
+            return ' '
+        return str(c)
 
+    pretty_print_grid(tree_heights, tree)
+
+def pretty_print_light_map(light):
+    for z in range(4):
+        pretty_print_grid(light, lambda c: ' ' if c[z] else 'x')
+
+def create_light_map(cells):
+    light = [[4 * [False] for _ in range(len(cells[0]))] for _ in range(len(cells))]
+    for y in range(len(cells)):
+        for x in range(len(cells[0])):
+            if cells[y][x] == None:
+                light[y][x] = None
+    return light
+
+def add_lamp_light(light, tree_heights, lamp_direction):
     if lamp_direction in ['north', 'south']:
         steps = ['southeast', 'northeast']
     else:
         steps = ['southeast', 'southwest']
 
-    w = len(cells[0])
-    start = topleft(cells)
+    width = len(tree_heights[0])
 
+    start = topleft(tree_heights)
     if lamp_direction == 'north':
-        start = step(start, 'south', w // 2 - 1)
+        start = step(start, 'south', width // 2 - 1)
     elif lamp_direction == 'west':
-        start = step(start, 'east', w // 2 - 1)
+        start = step(start, 'east', width // 2 - 1)
 
     p = start
-    for _, s in zip(range(w), cycle(steps)):
+    for _, s in zip(range(width), cycle(steps)):
         shadow_height = 0
-        for i in range(w // 2):
+        for i in range(width // 2):
             x, y = step(p, lamp_direction, i)
-            shadows[y][x] = shadow_height
-            shadow_height = max(shadow_height, cells[y][x])
-
+            for z in range(4 - shadow_height):
+                light[y][x][shadow_height + z] = True
+            shadow_height = max(shadow_height, tree_heights[y][x])
         p = step(p, s)
 
-    return shadows
-
-def create_tall_neighbor_map(cells):
+def add_fluorescent_light(light, cells, lamp_direction):
     width  = len(cells[0])
     height = len(cells)
-
-    ts = [width * [None] for _ in range(height)]
-
-    for y in range(height):
-        for x in range(width):
-            if cells[y][x] == None:
-                continue
-
-            count = 0
-            ds = [ 'north', 'northeast', 'southeast', 'south', 'southwest', 'northwest' ]
-            for d in ds:
-                nx, ny = step((x, y), d)
-                if nx < 0 or nx >= width or ny < 0 or ny >= height or cells[ny][nx] == None:
-                    continue
-                
-                if cells[ny][nx] < 2:
-                    continue
-
-                count += 1
-
-            ts[y][x] = count
-
-    return ts
-
-def create_fluorescent_light_map(tree_shadows, cells, lamp_direction):
-    width  = len(cells[0])
-    height = len(cells)
-
-    light = [width * [5 * [False]] for _ in range(height)]
 
     # Find all trees that receive some light
     lit_trees = []
     for y in range(height):
         for x in range(width):
             if cells[y][x] == None:
-                light[y][x] = None
+                continue
 
-            if tree_shadows[y][x] == None or tree_shadows[y][x] >= cells[y][x]:
+            if cells[y][x] <= 0 or not any([light[y][x][z] for z in range(cells[y][x])]):
                 continue
 
             lit_trees.append((x, y))
@@ -192,12 +174,42 @@ def create_fluorescent_light_map(tree_shadows, cells, lamp_direction):
 
                 shadow_height = max(shadow_height, cells[y][x])
 
-    return light
+def create_tall_neighbor_map(cells):
+    width  = len(cells[0])
+    height = len(cells)
 
-def update_forest(cells, lamp_direction):
+    ts = [width * [None] for _ in range(height)]
+
+    for y in range(height):
+        for x in range(width):
+            if cells[y][x] == None:
+                continue
+
+            count = 0
+            ds = [ 'north', 'northeast', 'southeast', 'south', 'southwest', 'northwest' ]
+            for d in ds:
+                nx, ny = step((x, y), d)
+                if nx < 0 or nx >= width or ny < 0 or ny >= height or cells[ny][nx] == None:
+                    continue
+                
+                if cells[ny][nx] < 2:
+                    continue
+
+                count += 1
+
+            ts[y][x] = count
+
+    return ts
+
+def update_forest(cells, lamp_direction, light_update):
     ncells = [row[:] for row in cells]
 
-    tree_shadows   = create_tree_shadow_map(cells, lamp_direction)
+    light = create_light_map(cells)
+    light_update(light, cells, lamp_direction)
+
+    #pretty_print_tree_heights(cells)
+    #pretty_print_light_map(light)
+
     tall_neighbors = create_tall_neighbor_map(cells)
 
     width  = len(cells[0])
@@ -215,7 +227,7 @@ def update_forest(cells, lamp_direction):
                 continue
 
             # The spot must be in the light
-            if tree_shadows[y][x] > 0:
+            if not light[y][x][0]:
                 continue
 
             ncells[y][x] = 0
@@ -225,15 +237,11 @@ def update_forest(cells, lamp_direction):
         for x in range(width):
             # Spot must be valid and there must be a tree or seed
             if cells[y][x] == None or cells[y][x] == -1:
-                continue
-
-            # Special case for seeds. Kinda ugly :/
-            if cells[y][x] == 0 and tree_shadows[y][x] == 0:
-                ncells[y][x] = cells[y][x] + 1
                 continue
 
             # The tree must have some light and cannot be fully in the shadow
-            if tree_shadows[y][x] >= cells[y][x]:
+            # There is a minimum of 1 light level that we check otherwise we would skip over seeds.
+            if not any([light[y][x][z] for z in range(max(1, cells[y][x]))]):
                 continue
 
             ncells[y][x] = cells[y][x] + 1
@@ -248,76 +256,31 @@ def update_forest(cells, lamp_direction):
 
     return (cut_tree_count, ncells)
 
-def update_forest_with_fluorescence(cells, lamp_direction):
-    ncells = [row[:] for row in cells]
-
-    tree_shadows      = create_tree_shadow_map(cells, lamp_direction)
-    tall_neighbors    = create_tall_neighbor_map(cells)
-    fluorescent_light = create_fluorescent_light_map(tree_shadows, cells, lamp_direction)
-
-    width  = len(cells[0])
-    height = len(cells)
-
-    # Find all spots where a seed will land
-    for y in range(height):
-        for x in range(width):
-            # Spot must be valid and empty
-            if cells[y][x] == None or cells[y][x] != -1:
-                continue
-
-            # Spot must have enough tall trees around
-            if tall_neighbors[y][x] < 2:
-                continue
-
-            # The spot must be in the light
-            if tree_shadows[y][x] > 0 and not fluorescent_light[y][x][0]:
-                continue
-
-            ncells[y][x] = 0
-
-    # Grow the trees
-    for y in range(height):
-        for x in range(width):
-            # Spot must be valid and there must be a tree or seed
-            if cells[y][x] == None or cells[y][x] == -1:
-                continue
-
-            # Special case for seeds. Kinda ugly :/
-            if cells[y][x] == 0 and (tree_shadows[y][x] == 0 or fluorescent_light[y][x][0]):
-                ncells[y][x] = cells[y][x] + 1
-                continue
-
-            # The tree must have some light
-            if tree_shadows[y][x] >= cells[y][x] and not any([fluorescent_light[y][x][z] for z in range(cells[y][x])]):
-                continue
-
-            ncells[y][x] = cells[y][x] + 1
-
-    cut_tree_count = 0
-
-    for y in range(height):
-        for x in range(width):
-            if ncells[y][x] == 5:
-                ncells[y][x] = -1
-                cut_tree_count += 1
-
-    return (cut_tree_count, ncells)
-
-
-def simulate(cells, update):
+def simulate(cells, light_update):
     cells = [row[:] for row in cells]
 
     lamp_directions = cycle(['south', 'west', 'north', 'east'])
 
     count = 0
     for i, d in zip(range(256), lamp_directions):
-        #pretty_print_cells(cells)
-        cutcount, cells = update(cells, d)
+        #pretty_print_tree_heights(cells)
+        cutcount, cells = update_forest(cells, d, light_update)
         count += cutcount
 
     return count
 
-cells = read_cells()
+def main():
+    def only_lamp_light(light, cells, lamp_direction):
+        add_lamp_light(light, cells, lamp_direction)
 
-print(simulate(cells, update_forest))
-print(simulate(cells, update_forest_with_fluorescence))
+    def lamp_light_and_fluorescence(light, cells, lamp_direction):
+        add_lamp_light(light, cells, lamp_direction)
+        # add_lamp_light must be called first, because we need the light of the lamp to determine
+        # if fluorescence is going to be added.
+        add_fluorescent_light(light, cells, lamp_direction)
+
+    cells = read_input()
+    print(simulate(cells, only_lamp_light))
+    print(simulate(cells, lamp_light_and_fluorescence))
+
+main()
