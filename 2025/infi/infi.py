@@ -136,7 +136,7 @@ def pretty_print_light_map(light):
     for z in range(4):
         pretty_print_grid(light, lambda c: ' ' if c[z] else 'x')
 
-def tree_has_light(tree_height, light):
+def has_light(tree_height, light):
     return any([light[z] for z in range(tree_height)])
 
 def add_lamp_light(light, tree_heights, lamp_direction):
@@ -168,10 +168,16 @@ def add_fluorescent_light(light, tree_heights, lamp_direction):
     lit_trees = []
     for y in range(light.height):
         for x in range(light.width):
-            if not tree_heights.is_valid_position(x, y) or tree_heights[y][x] <= 0:
+            # Must be a valid position
+            if not tree_heights.is_valid_position(x, y):
                 continue
 
-            if not tree_has_light(tree_heights[y][x], light[y][x]):
+            # There must be a tree of at least height 1
+            if tree_heights[y][x] <= 0:
+                continue
+
+            # The tree must have some light to absorb
+            if not has_light(tree_heights[y][x], light[y][x]):
                 continue
 
             lit_trees.append((x, y))
@@ -259,7 +265,7 @@ def update_forest(tree_heights, lamp_direction, add_light):
     # Grow the trees
     for y in range(height):
         for x in range(width):
-            # Spot must be valid and there must be a tree or seed
+            # Spot must be valid
             if not tree_heights.is_valid_position(x, y):
                 continue
 
@@ -269,7 +275,7 @@ def update_forest(tree_heights, lamp_direction, add_light):
 
             # The tree must have some light and cannot be fully in the shadow
             # There is a minimum of 1 light level that we check otherwise we would skip over seeds.
-            if not tree_has_light(max(1, tree_heights[y][x]), light[y][x]):
+            if not has_light(max(1, tree_heights[y][x]), light[y][x]):
                 continue
 
             ntree_heights[y][x] = tree_heights[y][x] + 1
@@ -291,7 +297,7 @@ def simulate(tree_heights, light_update):
     lamp_directions = itertools.cycle(['south', 'west', 'north', 'east'])
 
     count = 0
-    for i, d in zip(range(256), lamp_directions):
+    for _, d in zip(range(256), lamp_directions):
         cutcount, tree_heights = update_forest(tree_heights, d, light_update)
         count += cutcount
 
