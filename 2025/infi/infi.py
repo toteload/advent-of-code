@@ -79,11 +79,11 @@ def rows_to_grid(rows):
     return grid
 
 def grid_to_rows(grid):
-    h = len(grid[0])
+    h = grid.width
     w = h // 2
     rows = [w * [None] for _ in range(h)]
 
-    start = topleft(grid)
+    start = grid.topleft()
 
     for y in range(0, h, 2):
         for x in range(w):
@@ -116,6 +116,7 @@ def read_input():
 def pretty_print_grid(grid, f):
     rows  = grid_to_rows(grid)
     lines = [''.join([f(c) for c in row]) for row in rows]
+    w = len(rows[0])
 
     print(' ' + w * '__    ')
     for i, line in enumerate(lines):
@@ -192,8 +193,8 @@ def add_fluorescent_light(light, tree_heights, lamp_direction):
     # For all the trees that received some light, shoot fluorescent rays
     for (tx, ty) in lit_trees:
         light_height = tree_heights[ty][tx]
-        shadow_height = 0
         for d in fluorescent_directions[lamp_direction]:
+            shadow_height = 0
             for i in itertools.count(1):
                 x, y = step((tx, ty), d, i)
 
