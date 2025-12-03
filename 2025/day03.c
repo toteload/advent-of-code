@@ -31,14 +31,10 @@ i32 main(i32 argc, char const **argv) {
         buf[len++] = *at++ - '0';
       }
 
-      char best = 0;
-      for (i32 i = 1; i < len; i++) {
-        char lmax = buf[find_max_idx(buf, 0, i)];
-        char rmax = buf[find_max_idx(buf, i, len)];
-        best = max(best, lmax * 10 + rmax);
-      }
+      i32 i = find_max_idx(buf, 0, len - 1);
+      i32 j = find_max_idx(buf, i + 1, len);
 
-      sum += best;
+      sum += 10 * buf[i] + buf[j];
 
       while (*at && !is_number(*at)) {
         at++;
