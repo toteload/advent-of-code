@@ -70,7 +70,7 @@ int32_t is_invalid2(int64_t x) {
       for (int32_t k = 0; k < i; k++) {
         if (buf[(j-1)*i+k] != buf[j*i+k]) {
           goto next;
-	}
+        }
       }
     }
 
