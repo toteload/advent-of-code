@@ -34,3 +34,29 @@ char* read_file(const char* path) {
 int32_t is_number(char c) {
   return c >= '0' && c <= '9';
 }
+
+i64 parse_int(char **text) {
+  char *at = *text;
+
+  i64 s = 0;
+  while (*at && is_number(*at)) {
+    s *= 10;
+    s += *at - '0';
+    at++;
+  }
+
+  *text = at;
+
+  return s;
+}
+
+void next_line(char **text) {
+  char *at = *text;
+  while (*at) {
+    char c = *at++;
+    if (c == '\n') {
+      break;
+    }
+  }
+  *text = at;
+}
