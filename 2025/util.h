@@ -7,6 +7,8 @@
 typedef int32_t i32;
 typedef int64_t i64;
 
+#define swap(a,b) do { typeof(a) _tmp = (a); a = b; b = _tmp; } while (0)
+
 char* read_file(const char* path) {
   FILE* f = fopen(path, "rb");
   if (!f) {
@@ -31,12 +33,16 @@ char* read_file(const char* path) {
   return buf;
 }
 
-int32_t is_number(char c) {
+inline int32_t is_number(char c) {
   return c >= '0' && c <= '9';
 }
 
-i64 parse_int(char **text) {
-  char *at = *text;
+inline i32 is_whitespace(char c) {
+  return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+}
+
+i64 parse_int_advance(char const **text) {
+  char const *at = *text;
 
   i64 s = 0;
   while (*at && is_number(*at)) {
@@ -50,13 +56,37 @@ i64 parse_int(char **text) {
   return s;
 }
 
-void next_line(char **text) {
-  char *at = *text;
+i64 parse_int(char const *at) {
+  i64 s = 0;
+  while (*at && is_number(*at)) {
+    s *= 10;
+    s += *at - '0';
+    at++;
+  }
+  return s;
+}
+
+// Advances *text until it has seen a '\n'. Points to the character after '\n'.
+char const * next_line(char const *at) {
   while (*at) {
     char c = *at++;
     if (c == '\n') {
       break;
     }
   }
-  *text = at;
+  return at;
+}
+
+char const * until_number(char const *at) {
+  while (*at && !is_number(*at)) {
+    at++;
+  }
+  return at;
+}
+
+char const * skip_whitespace(char const *at) {
+  while (*at && is_whitespace(*at)) {
+    at++;
+  }
+  return at;
 }
