@@ -68,26 +68,26 @@ i64 parse_int(char const *at) {
 }
 
 // Advances *text until it has seen a '\n'. Points to the character after '\n'.
-char const * next_line(char const *at) {
+char *next_line(char const *at) {
   while (*at) {
     char c = *at++;
     if (c == '\n') {
       break;
     }
   }
-  return at;
+  return (char*)at;
 }
 
-char const * until_number(char const *at) {
+char *until_number(char const *at) {
   while (*at && !is_number(*at)) {
     at++;
   }
-  return at;
+  return (char*)at;
 }
 
-char const * skip_whitespace(char const *at) {
+char *skip_whitespace(char const *at) {
   while (*at && is_whitespace(*at)) {
     at++;
   }
-  return at;
+  return (char*)at;
 }

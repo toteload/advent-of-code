@@ -21,19 +21,19 @@ i32 main(i32 argc, char const **argv) {
 
     char *at = text;
     while (is_number(*at)) {
-      i64 start = parse_int(&at);
+      i64 start = parse_int_advance((char const **)&at);
       at++; // Skip '-'
-      i64 end = parse_int(&at);
+      i64 end = parse_int_advance((char const **)&at);
 
       pairs[npairs++] = (Pair){ start, end + 1, };
 
-      next_line(&at);
+      at = next_line(at);
     }
 
-    next_line(&at);
+    at = next_line(at);
 
     while (*at) {
-      i64 x = parse_int(&at);
+      i64 x = parse_int_advance((char const **)&at);
 
       // naive linear search
       for (i32 i = 0; i < npairs; i++) {
@@ -43,7 +43,7 @@ i32 main(i32 argc, char const **argv) {
         }
       }
 
-      next_line(&at);
+      at = next_line(at);
     }
 
     printf("%lld\n", count);
