@@ -4,11 +4,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
+typedef uint8_t u8;
+typedef uint16_t u16;
 typedef int32_t i32;
 typedef int64_t i64;
 
 #define swap(a,b) do { typeof(a) _tmp = (a); a = b; b = _tmp; } while (0)
+
+// Ugly macro >:( but oh well :)
+#define min(a,b) (((a)<(b)) ? (a) : (b))
+#define max(a,b) (((a)>(b)) ? (a) : (b))
 
 char* read_file(const char* path) {
   FILE* f = fopen(path, "rb");
@@ -67,6 +74,17 @@ i64 parse_int(char const *at) {
   return s;
 }
 
+char const *parse_i64(char const *at, i64 *x) {
+  i64 acc = 0;
+  while (*at && is_number(*at)) {
+    acc *= 10;
+    acc += *at - '0';
+    at++;
+  }
+  *x = acc;
+  return at;
+}
+
 // Advances *text until it has seen a '\n'. Points to the character after '\n'.
 char *next_line(char const *at) {
   while (*at) {
@@ -91,3 +109,4 @@ char *skip_whitespace(char const *at) {
   }
   return (char*)at;
 }
+
