@@ -88,11 +88,9 @@ i32 main(i32 argc, char const **argv) {
     }
 
     button_counts[len] = button_count;
-
-    // Parse joltage requirements here :)
-
     len++;
 
+    // Skip the joltage requirements
     at = next_line(at);
   }
 
