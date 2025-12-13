@@ -44,41 +44,6 @@ i32 main(i32 argc, char const **argv) {
 
   // Part two
   {
-    i32 winding = 0;
-    i32 horizontal = 0;
-    i32 vertical = 0;
-    for (i32 i = 1; i < npoints - 1; i++) {
-      if (points[i][0] == points[i+1][0]) {
-        horizontal++;
-
-        i32 dx = points[i][0] - points[i-1][0];
-        i32 dy = points[i+1][1] - points[i][1];
-
-        i32 sx = (dx < 0) ? -1 : 1;
-        i32 sy = (dy < 0) ? -1 : 1;
-
-        if (sx == sy) {
-          winding++;
-        } else {
-          winding--;
-        } 
-      } else {
-        vertical++;
-
-        i32 dx = points[i+1][0] - points[i][0];
-        i32 dy = points[i][1] - points[i-1][1];
-
-        i32 sx = (dx < 0) ? -1 : 1;
-        i32 sy = (dy < 0) ? -1 : 1;
-
-        if (sx == sy) {
-          winding--;
-        } else {
-          winding++;
-        }
-      }
-    }
-
     // ..............
     // .......0---1..
     // .......|...|..
@@ -89,13 +54,48 @@ i32 main(i32 argc, char const **argv) {
     // .........3-2..
     // ..............
 
-    printf("winding %d, vertical %d, horizontal %d\n", winding, vertical, horizontal);
-
     // 1. go over all pairs
     //   - if other point is on wrong side of line -> skip
     //   - go over all negative areas
     //     - if any overlap with current area -> invalid area
 
+    i64 best = 0;
+    for (i32 i = 0; i < npoints - 1; i++) {
+      // The -1 and 1 values for the sign are dependent on the winding of the shape,
+      // but because we only need to solve one instance they are hardcoded.
+      // The winding is the same for the example and input (at least for me).
+      i32 dim;
+      i32 sign;
+      if (points[i][0] == points[i+1][0]) {
+        dim = 0;
+        sign = (points[i][1] < points[i+1][1]) ? -1 : 1;
+      } else {
+        dim = 1;
+        sign = (points[i][0] < points[i+1][0]) ? 1 : -1;
+      }
+
+      //printf("dim=%d for %d\n", dim, i);
+
+      for (i32 j = i + 1; j < npoints; j++) {
+        i32 x_i = points[i][0];
+        i32 x_j = points[j][0];
+
+        i32 y_i = points[i][1];
+        i32 y_j = points[j][1];
+
+        if (sign * points[j][dim] < sign * points[i][dim]) {
+          //printf("%d on outside for (%d, %d), because %d < %d\n", j, i, j, sign * points[j][dim], sign * points[i][dim]);
+          continue;
+        }
+
+        i64 dx = 1 + abs(x_i - x_j);
+        i64 dy = 1 + abs(y_i - y_j);
+
+        i64 area = dx * dy;
+      }
+    }
+
+#if 0
     i64 best = 0;
     for (i32 i = 0; i < npoints - 1; i++) {
       i32 dim;
@@ -157,6 +157,7 @@ i32 main(i32 argc, char const **argv) {
         best = area;
       }
     }
+#endif
 
     // 4531758980 too high
     // 3252683184 too high
