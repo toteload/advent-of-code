@@ -1,52 +1,49 @@
 import fileinput
 import re
-from functools import cache
+from z3 import *
 
-lines = [*fileinput.input(encoding="utf-8")]
+def parse_machines(lines):
+    re_buttons = re.compile(r'(?:\(([0-9,]+)\))')
+    re_joltage = re.compile(r'(?:\{([0-9,]+)\})')
 
-re_buttons = re.compile(r'(?:\(([0-9,]+)\))')
-re_joltage = re.compile(r'(?:\{([0-9,]+)\})')
+    machines = []
 
-machines = []
+    for line in lines:
+        buttons = [[int(x) for x in text.split(',')] for text in re_buttons.findall(line)]
+        req = [int(x) for x in re_joltage.findall(line)[0].split(',')]
+        machines.append((buttons, req));
 
-for line in lines:
-    buttons = [[int(x) for x in text.split(',')] for text in re_buttons.findall(line)]
-    joltage = re_joltage.findall(line)[0]
-    machines.append((buttons, joltage));
+    return machines
 
-BIG = 9999999999999999999
+# Using Z3 feels a bit like cheating though :P 
+def solve_machine_with_z3(machine):
+    buttons,req = machine
+    s = Optimize()
 
-def pack(xs):
-    return ','.join(str(x) for x in xs)
+    size = len(req)
 
-def unpack(s):
-    return [int(x) for x in s.split(',')]
+    x = [Int(f'x_{i}') for i in range(len(buttons))]
+    for v in x:
+        s.add(v >= 0)
 
-for [buttons, joltage] in machines:
-    @cache
-    def find_min_press(s):
-        state = unpack(s)
-        if any(x < 0 for x in state):
-            return BIG
+    lights = [[] for _ in range(size)]
 
-        if all(x == 0 for x in state):
-            return 0
+    for i, button in enumerate(buttons):
+        for j in button:
+            lights[j].append(i)
 
-        bestest = BIG
+    for light, y in zip(lights, req):
+        s.add(Sum([x[i] for i in light]) == y)
 
-        for button in buttons:
-            max_press_count = min(state[i] for i in button)
+    s.minimize(Sum(x))
 
-            best = BIG
-            for count in range(max_press_count, 0, -1):
-                acc = state[:]
-                for i in button:
-                    acc[i] -= count
-                best = min(best, count + find_min_press(pack(acc)))
-                if best < BIG:
-                    bestest = min(bestest, best)
-                    break
-        
-        return bestest
+    assert(s.check() == sat)
 
-    print(find_min_press(joltage))
+    m = s.model()
+
+    return sum([m[v].as_long() for v in x])
+
+if __name__ == "__main__":
+    lines = [*fileinput.input(encoding="utf-8")]
+    machines = parse_machines(lines)
+    print(sum(solve_machine_with_z3(m) for m in machines))
