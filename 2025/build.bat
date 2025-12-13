@@ -7,6 +7,6 @@ if "%1"=="" (
 
 set padded=0%1
 set num=%padded:~-2%
-clang -Wall -Wextra -O2 -march=native day%num%.c -o day%num%.exe
+clang -Wall -Wextra -O0 -march=native day%num%.c -o day%num%.exe
 
 :end

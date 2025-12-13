@@ -13,9 +13,13 @@ typedef int64_t i64;
 
 #define swap(a,b) do { typeof(a) _tmp = (a); a = b; b = _tmp; } while (0)
 
-// Ugly macro >:( but oh well :)
+#ifndef min
 #define min(a,b) (((a)<(b)) ? (a) : (b))
+#endif
+
+#ifndef max
 #define max(a,b) (((a)>(b)) ? (a) : (b))
+#endif
 
 char* read_file(const char* path) {
   FILE* f = fopen(path, "rb");
