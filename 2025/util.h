@@ -6,6 +6,7 @@
 #include <string.h>
 #include <assert.h>
 
+typedef int8_t i8;
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef int32_t i32;
@@ -43,6 +44,18 @@ char* read_file(const char* path) {
   fclose(f);
 
   return buf;
+}
+
+inline i32 sign_i32(i32 x) {
+  if (x < 0) {
+    return -1;
+  }
+
+  if (x > 0) {
+    return 1;
+  }
+
+  return 0;
 }
 
 inline int32_t is_number(char c) {
