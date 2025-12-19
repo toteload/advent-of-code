@@ -2,6 +2,7 @@
 
 #define MAX_BOXES 1000
 #define MAX_CONNECTIONS 1000
+#define MAX_DISTANCE_COUNT ((MAX_CONNECTIONS * (MAX_CONNECTIONS - 1)) / 2)
 
 typedef struct Pair {
   i32 idx[2];
@@ -11,57 +12,63 @@ typedef struct Box {
   i32 data[3];
 } Box;
 
-i64 box_distance(Box *a, Box *b) {
-  i64 dx = a->data[0] - b->data[0];
-  i64 dy = a->data[1] - b->data[1];
-  i64 dz = a->data[2] - b->data[2];
+Box boxes[MAX_BOXES];
+i64 distances[MAX_DISTANCE_COUNT];
+Pair pairs[MAX_DISTANCE_COUNT];
+
+i32 has_common_point(Pair a, Pair b) {
+  return a.idx[0] == b.idx[0] || 
+         a.idx[0] == b.idx[1] ||
+         a.idx[1] == b.idx[0] ||
+         a.idx[1] == b.idx[1];
+}
+
+inline i64 box_distance(Box a, Box b) {
+  i64 dx = a.data[0] - b.data[0];
+  i64 dy = a.data[1] - b.data[1];
+  i64 dz = a.data[2] - b.data[2];
   return dx*dx + dy*dy + dz*dz;
 }
 
-Pair *find_insert(Box *box, Pair *start, Pair *end, i64 d) {
+i32 find_insert(i64 *distances, i32 start, i32 end, i64 d) {
   if (start == end) {
     return start;
   }
 
-  i32 len = (i32)(end - start);
-  Pair *mid = start + len / 2;
+  i32 mid = start + (end - start) / 2;
 
-  i64 d_mid = box_distance(box + mid->idx[0], box + mid->idx[1]);
-
-  if (d < d_mid) {
-    return find_insert(box, start, mid, d);
+  if (d < distances[mid]) {
+    return find_insert(distances, start, mid, d);
   }
 
-  return find_insert(box, mid + 1, end, d);
+  return find_insert(distances, mid + 1, end, d);
 }
 
-i32 flood(Pair *pairs, Pair **visited) {
-  if (pairs == *visited) {
-    return 0;
-  }
+i32 flood(Pair *pairs, i32 start, i32 *visited) {
+  i32 end = *visited - 1;
 
-  *visited = *visited - 1;
+  swap(pairs[start], pairs[end]);
 
-  Pair curr = *pairs;
+  i32 at = end;
+  while (at >= end) {
+    for (i32 i = 0; i < end;) {
+      if (has_common_point(pairs[i], pairs[at])) {
+        end--;
+        swap(pairs[i], pairs[end]);
+        continue;
+      }
 
-  swap(*pairs, **visited);
-
-  i32 sum = 0;
-
-  Pair *at = pairs;
-  while (at < *visited) {
-    if (at->idx[0] == curr.idx[0] ||
-        at->idx[0] == curr.idx[1] ||
-        at->idx[1] == curr.idx[0] ||
-        at->idx[1] == curr.idx[1])
-    {
-      sum += flood(pairs, visited);
+      i++;
     }
 
-    at++;
+    at--;
   }
 
-  return 1 + sum;
+  i32 count = *visited - end;
+
+  *visited = end;
+
+  return count;
 }
 
 i32 main(i32 argc, char const **argv) {
@@ -73,9 +80,7 @@ i32 main(i32 argc, char const **argv) {
   char *text = read_file(argv[1]);
   i32 npairs = parse_int(argv[2]);
 
-  Box box[MAX_BOXES];
-
-  i32 len = 0;
+  i32 box_count = 0;
   char const *at = text;
   while (*at) {
     i32 x = parse_int_advance(&at);
@@ -84,51 +89,116 @@ i32 main(i32 argc, char const **argv) {
     at++; // skip ','
     i32 z = parse_int_advance(&at);
 
-    box[len++] = (Box){ .data = { x, y, z, }, };
+    boxes[box_count++] = (Box){ .data = { x, y, z, }, };
 
     at = next_line(at);
   }
 
-  Pair pairs[MAX_CONNECTIONS];
-  for (i32 i = 0, k = 0; i < len - 1; i++) {
-    for (i32 j = i + 1; j < len; j++, k++) {
-      i64 d = box_distance(box + i, box + j);
+  i32 distance_count = (box_count * (box_count - 1)) / 2;
 
-      Pair *end = pairs + min(k, npairs);
-      Pair *insert = find_insert(box, pairs, end, d);
+  // This loop is a LOT slower than I expected.
+  for (i32 i = 0, k = 0; i < box_count - 1; i++) {
+    for (i32 j = i + 1; j < box_count; j++, k++) {
+      i64 d = box_distance(boxes[i], boxes[j]);
 
-      if (insert == end && i >= npairs) {
-        continue;
+      i32 insert = find_insert(distances, 0, k, d);
+
+      if (insert != k) {
+        memmove(distances + insert + 1, distances + insert, sizeof(i64) * (k - insert));
+        memmove(pairs + insert + 1, pairs + insert, sizeof(Pair) * (k - insert));
       }
 
-      end = pairs + min(k+1, npairs);
-      memmove(insert + 1, insert, sizeof(Pair) * (end - insert));
-
-      *insert = (Pair){ .idx = { i, j, }, };
+      distances[insert] = d;
+      pairs[insert] = (Pair){ .idx = { i, j, }, };
     }
   }
 
-  for (i32 i = 0; i < npairs; i++) {
-    i64 d = box_distance(box + pairs[i].idx[0], box + pairs[i].idx[1]);
-    printf("distance %lld, %d %d\n", d, pairs[i].idx[0], pairs[i].idx[1]);
+  // Part two
+  i64 answer2 = 0;
+  {
+    u8 included[MAX_BOXES] = {0};
+
+    for (i32 i = 0; i < distance_count; i++) {
+      Pair cur = pairs[i];
+      included[cur.idx[0]] = 1;
+      included[cur.idx[1]] = 1;
+
+      i32 all_included = 1;
+      for (i32 j = 0; j < box_count; j++) {
+        if (!included[j]) {
+          all_included = 0;
+          break;
+        }
+      }
+
+      if (all_included) {
+        answer2 = boxes[cur.idx[0]].data[0] * boxes[cur.idx[1]].data[0];
+        break;
+      }
+    }
   }
 
-  i32 best[3] = { 0, 0, 0, };
+  // Part one
+  i64 answer1 = 0;
+  {
+    i32 best[3] = { 1, 1, 1, };
 
-  Pair *visited = pairs + npairs;
-  while (visited != pairs) {
-    i32 size = flood(pairs, &visited);
+    i32 visited = npairs;
+    while (visited != 0) {
+      i32 len = flood(pairs, 0, &visited);
 
-    printf("%d\n", size);
+      // This is some very advanced (read ugly bullshit) code.
+      i32 count = 2;
+      for (i32 i = 1; i < len; i++) {
+        Pair cur = pairs[visited+i];
 
-    if (size > best[0]) { best[0] = size; }
+        {
+          i32 needle = cur.idx[0];
 
-    if (best[0] > best[1]) { swap(best[0], best[1]); }
-    if (best[1] > best[2]) { swap(best[1], best[2]); }
+          i32 seen = 0;
+          for (i32 j = 0; j < i; j++) {
+            Pair prev = pairs[visited+j];
+            if (prev.idx[0] == needle || prev.idx[1] == needle) {
+              seen = 1;
+              break;
+            }
+          }
+
+          if (!seen) {
+            count++;
+          }
+        }
+
+        {
+          i32 needle = cur.idx[1];
+
+          i32 seen = 0;
+          for (i32 j = 0; j < i; j++) {
+            Pair prev = pairs[visited+j];
+            if (prev.idx[0] == needle || prev.idx[1] == needle) {
+              seen = 1;
+              break;
+            }
+          }
+
+          if (!seen) {
+            count++;
+          }
+        }
+      }
+
+      //printf("%d\n", count);
+
+      if (count > best[0]) { best[0] = count; }
+
+      if (best[0] > best[1]) { swap(best[0], best[1]); }
+      if (best[1] > best[2]) { swap(best[1], best[2]); }
+    }
+
+    answer1 = best[0] * best[1] * best[2];
   }
 
-  i64 answer = best[0] * best[1] * best[2];
-  printf("%lld\n", answer);
+  printf("%lld\n%lld\n", answer1, answer2);
 
   return 0;
 }
