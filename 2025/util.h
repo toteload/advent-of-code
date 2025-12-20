@@ -10,6 +10,7 @@ typedef int8_t i8;
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef int32_t i32;
+typedef uint32_t u32;
 typedef int64_t i64;
 
 #define swap(a,b) do { typeof(a) _tmp = (a); a = b; b = _tmp; } while (0)
